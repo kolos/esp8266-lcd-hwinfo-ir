@@ -167,12 +167,18 @@ static void handleData(void* arg, AsyncClient* client, void *data, size_t len) {
   if(memcmp(hello_magic, data, sizeof hello_magic) == 0) {
     Serial.println("hello received, sending request");
     lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("HWiNFO connected");
+    lcd.setCursor(0, 1);
+    lcd.print("waiting for data");
     shouldDisplayTimeScreen = false;
     os_timer_arm(&intervalTimer, 2000, true); // schedule for reply to server at next 2s
   }else if(memcmp(magic, data, sizeof magic) == 0) {
-    magic_received = true;
+    if(magic_received == false) {
+      magic_received = true;
+      lcd.clear();
+    }
     idx=0;
-
     parse(data, len);
   } else {
     parse(data, len);
@@ -205,30 +211,23 @@ void onReadComplete() {
 
   if(reading.group == 3 && reading.id == 83886087) { /* CPU+SoC Power (SVI2 TFN) (W) */
     lcd.setCursor(12, 0);
-    lcd.printf("%3d", (int)reading.value);
-    lcd.print("W");
+    lcd.printf("%3dW", (int)reading.value);
   } else if(reading.group == 3 && reading.id == 16777216) { /* CPU (Tctl/Tdie) (C) */
     lcd.setCursor(13, 1);
     lcd.printf("%2d", (int)reading.value);
     lcd.write(byte(0));
   } else if(reading.group == 10 && reading.id == 117440513) { /* GPU D3D Usage (%) */
     lcd.setCursor(0, 1);
-    lcd.print("G");
-    lcd.printf("%3d", (int)reading.value);
-    lcd.print("%");
+    lcd.printf("G%3d%%", (int)reading.value);
   } else if(reading.group == 1 && reading.id == 117440521) { /* Total CPU Usage (%) */
     lcd.setCursor(0, 0);
-    lcd.print("C");
-    lcd.printf("%3d", (int)reading.value);
-    lcd.print("%");
+    lcd.printf("C%3d%%", (int)reading.value);
   } else if(reading.group == 0 && reading.id == 134217731) { /* Physical Memory Used (MB) */
     lcd.setCursor(6, 0);
-    lcd.printf("%4d", (int)reading.value);
-    lcd.print("M");
+    lcd.printf("%4dM", (int)reading.value);
   } else if(reading.group == 10 && reading.id == 134217730) { /* GPU D3D Memory Dynamic (MB) */
     lcd.setCursor(6, 1);
-    lcd.printf("%4d", (int)reading.value);
-    lcd.print("M");
+    lcd.printf("%4dM", (int)reading.value);
   }
 }
 
