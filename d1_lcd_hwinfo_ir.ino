@@ -49,6 +49,7 @@ String _weather_barometertrend;
 tm _weather_rain_time;
 float _weather_amount_of_rain;
 byte _next_rain_idx;
+unsigned long _weather_last_updated = 0;
 
 /** custom chars **/
 byte degreeCelciusChar[] = { 0x8, 0x14, 0x8, 0x3, 0x4, 0x4, 0x3, 0x0 };
@@ -130,6 +131,19 @@ void updateNTP() {
   }
 }
 
+void human_time_from_secs(int secs) {
+  if(secs < 60) {
+    lcd.printf("%02dmp", secs);
+    return;
+  }
+
+  if(secs < 60 * 60) {
+    lcd.printf("%02dp%02dmp", secs / 60, secs % 60);
+    return;
+  }
+
+  lcd.printf("%02d\x06%02dp", (secs / 60 / 60), (secs / 60) % 60);
+}
 
 void secTicker()
 {
@@ -154,9 +168,6 @@ void secTicker()
   struct tm *timeinfo = localtime (&t);
 
   lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.printf("%d", _weather_temp);
-  lcd.write(byte(0));
 
   lcd.setCursor(11, 0);
   lcd.printf("%02d%c%02d", 
@@ -164,41 +175,56 @@ void secTicker()
     timeinfo->tm_sec % 2 ? ':' : ' ',
     timeinfo->tm_min);
 
-  lcd.setCursor(4, 0);
-  lcd.print(_weather_phrase);
-
-  lcd.setCursor(0, 1);
-  if(_weather_has_precipitation) {
-    int rain_in_minutes = round((mktime(&_weather_rain_time) - t) / 60);
-    if(_next_rain_idx == 0) {
-      lcd.print("M\x07g");
-    } else {
-      lcd.print("Es\x01");
-    }
-    lcd.printf(": %dp %.2fmm",
-      rain_in_minutes,
-      _weather_amount_of_rain);
+  if(_weather_last_updated + ((WEATHER_UPDATE_SECS + 60) * 1000) < millis()) {
+    // weather more than update secs + 1 min old
+    
+    lcd.setCursor(0, 0);
+    lcd.print("Nincs adat");
+    lcd.setCursor(0, 1);
+    human_time_from_secs(WEATHER_UPDATE_SECS - weather_age);
+    lcd.print(" / ");
+    human_time_from_secs((millis() - _weather_last_updated) / 1000);
   } else {
-    if(tick % 3 == 0) screen++;
-    screen = screen % 3;
-    switch(screen) {
-      case 0:
-        lcd.printf("Sz\x07l: %dkm, %d\xdf",
-          _weather_wind_speed,
-          _weather_wind_dir);
-        break;
-      case 1:
-        lcd.printf("P\x03ra: %d%%, %d",
-          _weather_humidity,
-          _weather_dewpoint);
-        lcd.write(byte(0));
-        break;
-      case 2:
-        lcd.print("L\x07gny.: ");
-        lcd.print(_weather_barometertrend);
-        break;
-      default:
-        break;
+    lcd.setCursor(0, 0);
+    lcd.printf("%d", _weather_temp);
+    lcd.write(byte(0));
+  
+    lcd.setCursor(4, 0);
+    lcd.print(_weather_phrase);
+  
+    lcd.setCursor(0, 1);
+    if(_weather_has_precipitation) {
+      int rain_in_minutes = round((mktime(&_weather_rain_time) - t) / 60);
+      if(_next_rain_idx == 0) {
+        lcd.print("M\x07g");
+      } else {
+        lcd.print("Es\x01");
+      }
+      lcd.printf(": %dp %.2fmm",
+        rain_in_minutes,
+        _weather_amount_of_rain);
+    } else {
+      if(tick % 3 == 0) screen++;
+      screen = screen % 3;
+      switch(screen) {
+        case 0:
+          lcd.printf("Sz\x07l: %dkm, %d\xdf",
+            _weather_wind_speed,
+            _weather_wind_dir);
+          break;
+        case 1:
+          lcd.printf("P\x03ra: %d%%, %d",
+            _weather_humidity,
+            _weather_dewpoint);
+          lcd.write(byte(0));
+          break;
+        case 2:
+          lcd.print("L\x07gny.: ");
+          lcd.print(_weather_barometertrend);
+          break;
+        default:
+          break;
+      }
     }
   }
 }

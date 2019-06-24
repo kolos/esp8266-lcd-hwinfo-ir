@@ -70,6 +70,7 @@ struct tm convert_string_to_tm(String string) {
 
 void onClientStateChange(void * arguments, asyncHTTPrequest * req, int readyState) {
   if(readyState == 4 && req->responseHTTPcode() == 200) {
+      _weather_last_updated = millis();
       String response = req->responseText();
 
       _weather_id = match_json(response, WEATHER_ID).toInt();
